@@ -1,4 +1,4 @@
-use std::{env, fmt};
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct TinkApiError;
@@ -28,96 +28,114 @@ struct AccessTokenResponse {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct PaymentRequest {
-    id: Option<String>,
-    amount: u32,
-    currency: String,
-    market: String,
-    source_message: String,
-    recipient_name: String,
-    remittance_information: RemittanceInformation,
-    destinations: Vec<Destination>,
+pub struct PaymentRequest {
+    pub id: Option<String>,
+    pub amount: u32,
+    pub currency: String,
+    pub market: String,
+    pub source_message: String,
+    pub recipient_name: String,
+    pub remittance_information: RemittanceInformation,
+    pub destinations: Vec<Destination>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct RemittanceInformation {
+pub struct RemittanceInformation {
     #[serde(rename = "type")]
-    type_field: String,
-    value: String,
+    pub type_field: String,
+    pub value: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Destination {
-    account_number: String,
+pub struct Destination {
+    pub account_number: String,
     #[serde(rename = "type")]
-    type_field: String,
+    pub type_field: String,
 }
 
-pub async fn get_access_token() -> Result<String, TinkApiError> {
-    const SCOPES: &str = "payment:read,payment:write";
-    let client_id = env::var("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID").unwrap();
-    let client_secret = env::var("TINK_LINK_PAYMENT_CLIENT_SECRET").unwrap();
-
-    let client = reqwest::Client::new();
-    let response = client
-        .post("https://api.tink.com/api/v1/oauth/token")
-        .header(
-            "Content-Type",
-            "application/x-www-form-urlencoded; charset=utf-8",
-        )
-        .form(&[
-            ("client_id", client_id.as_str()),
-            ("client_secret", client_secret.as_str()),
-            ("grant_type", "client_credentials"),
-            ("scope", SCOPES),
-        ])
-        .send()
-        .await?
-        .json::<AccessTokenResponse>()
-        .await?;
-
-    Ok(response.access_token)
+pub struct TinkApiGateway {
+    api_url: String,
+    client_id: String,
+    client_secret: String,
+    reqwest_client: reqwest::Client,
 }
 
-pub async fn create_payment_request(
-    access_token: &str,
-    market: &str,
-    currency: &str,
-    amount: u32,
-) -> Result<String, TinkApiError> {
-    let payment_request = PaymentRequest {
-        id: None,
-        amount,
-        currency: currency.to_owned(),
-        market: market.to_owned(),
-        source_message: "Payment for Sneaker 034".to_owned(),
-        recipient_name: "Demo Store AB".to_owned(),
-        remittance_information: RemittanceInformation {
-            type_field: "UNSTRUCTURED".to_owned(),
-            value: "3245928392092".to_owned(),
-        },
-        destinations: vec![Destination {
-            account_number: "33008808080808".to_owned(),
-            type_field: "se".to_owned(),
-        }],
-    };
+impl TinkApiGateway {
+    pub fn new(api_url: String, client_id: String, client_secret: String) -> Self {
+        Self {
+            api_url,
+            client_id,
+            client_secret,
+            reqwest_client: reqwest::Client::new(),
+        }
+    }
 
-    let client = reqwest::Client::new();
-    let response = client
-        .post("https://api.tink.com/api/v1/payments/requests")
-        .header("Content-Type", "application/json; charset=utf-8")
-        .bearer_auth(access_token)
-        .json(&payment_request)
-        .send()
-        .await?
-        .json::<PaymentRequest>()
-        .await?;
+    pub async fn get_access_token(&self) -> Result<String, TinkApiError> {
+        const SCOPES: &str = "payment:read,payment:write";
+        let response = self
+            .reqwest_client
+            .post(format!("{}/api/v1/oauth/token", self.api_url))
+            .header(
+                "Content-Type",
+                "application/x-www-form-urlencoded; charset=utf-8",
+            )
+            .form(&[
+                ("client_id", self.client_id.as_str()),
+                ("client_secret", self.client_secret.as_str()),
+                ("grant_type", "client_credentials"),
+                ("scope", SCOPES),
+            ])
+            .send()
+            .await?
+            .json::<AccessTokenResponse>()
+            .await?;
 
-    Ok(response.id.unwrap())
-}
+        Ok(response.access_token)
+    }
 
-pub fn get_transfer_status(_access_token: &str, _request_id: &str) -> Result<String, TinkApiError> {
-    Ok("PENDING".to_owned())
+    pub async fn create_payment_request(
+        &self,
+        access_token: &str,
+        market: &str,
+        currency: &str,
+        amount: u32,
+    ) -> Result<PaymentRequest, TinkApiError> {
+        let payment_request = PaymentRequest {
+            id: None,
+            amount,
+            currency: currency.to_owned(),
+            market: market.to_owned(),
+            source_message: "Payment for Sneaker 034".to_owned(),
+            recipient_name: "Demo Store AB".to_owned(),
+            remittance_information: RemittanceInformation {
+                type_field: "UNSTRUCTURED".to_owned(),
+                value: "3245928392092".to_owned(),
+            },
+            destinations: vec![Destination {
+                account_number: "33008808080808".to_owned(),
+                type_field: "se".to_owned(),
+            }],
+        };
+
+        Ok(self
+            .reqwest_client
+            .post("https://api.tink.com/api/v1/payments/requests")
+            .header("Content-Type", "application/json; charset=utf-8")
+            .bearer_auth(access_token)
+            .json(&payment_request)
+            .send()
+            .await?
+            .json::<PaymentRequest>()
+            .await?)
+    }
+
+    pub fn get_transfer_status(
+        &self,
+        _access_token: &str,
+        _request_id: &str,
+    ) -> Result<String, TinkApiError> {
+        Ok("PENDING".to_owned())
+    }
 }
