@@ -14,11 +14,8 @@ async fn payment_request(market: &str, currency: &str, amount: u32) -> Result<St
         Err(_e) => return Err(Status::InternalServerError),
     };
 
-    match tink::create_payment_request(&access_token, &market, &currency, amount) {
-        Ok(()) => Ok(format!(
-            "payment-request: {}; {} {}",
-            market, amount, currency
-        )),
+    match tink::create_payment_request(&access_token, &market, &currency, amount).await {
+        Ok(id) => Ok(format!("payment request id: {}", id)),
         Err(_e) => Err(Status::InternalServerError),
     }
 }
