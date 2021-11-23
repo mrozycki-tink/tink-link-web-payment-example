@@ -38,6 +38,38 @@ pub struct PaymentRequest {
     pub remittance_information: RemittanceInformation,
     pub destinations: Vec<Destination>,
 }
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedTransfers {
+    pub payment_request_created_transfers: Vec<CreatedTransfer>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedTransfer {
+    pub amount: i64,
+    pub created: i64,
+    pub currency: String,
+    pub destination: Destination,
+    pub id: String,
+    pub market: String,
+    pub provider_name: String,
+    pub recipient_name: String,
+    pub source: Source,
+    pub source_message: String,
+    pub status: String,
+    pub status_message: String,
+    pub updated: i64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Source {
+    pub account_number: String,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub uri: String,
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -135,17 +167,17 @@ impl TinkApiGateway {
         &self,
         access_token: &str,
         request_id: &str,
-    ) -> Result<PaymentRequest, TinkApiError> {
+    ) -> Result<CreatedTransfers, TinkApiError> {
         Ok(self
             .reqwest_client
             .get(format!(
-                "{}/api/v1/payments/requests/{}",
+                "{}/api/v1/payments/requests/{}/transfers",
                 self.api_url, request_id
             ))
             .bearer_auth(access_token)
             .send()
             .await?
-            .json::<PaymentRequest>()
+            .json::<CreatedTransfers>()
             .await?)
     }
 }
