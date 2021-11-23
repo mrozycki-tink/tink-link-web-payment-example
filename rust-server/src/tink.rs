@@ -121,7 +121,7 @@ impl TinkApiGateway {
 
         Ok(self
             .reqwest_client
-            .post("https://api.tink.com/api/v1/payments/requests")
+            .post(format!("{}/api/v1/payments/requests", self.api_url))
             .header("Content-Type", "application/json; charset=utf-8")
             .bearer_auth(access_token)
             .json(&payment_request)
@@ -131,11 +131,21 @@ impl TinkApiGateway {
             .await?)
     }
 
-    pub fn get_transfer_status(
+    pub async fn get_transfer_status(
         &self,
-        _access_token: &str,
-        _request_id: &str,
-    ) -> Result<String, TinkApiError> {
-        Ok("PENDING".to_owned())
+        access_token: &str,
+        request_id: &str,
+    ) -> Result<PaymentRequest, TinkApiError> {
+        Ok(self
+            .reqwest_client
+            .get(format!(
+                "{}/api/v1/payments/requests/{}",
+                self.api_url, request_id
+            ))
+            .bearer_auth(access_token)
+            .send()
+            .await?
+            .json::<PaymentRequest>()
+            .await?)
     }
 }

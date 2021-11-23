@@ -39,11 +39,8 @@ async fn payment_confirmation(
         Err(_e) => return Err(Status::InternalServerError),
     };
 
-    match tink.get_transfer_status(&access_token, request_id) {
-        Ok(status) => Ok(format!(
-            "payment-confirmation: {}; status: {}",
-            request_id, status
-        )),
+    match tink.get_transfer_status(&access_token, request_id).await {
+        Ok(request) => Ok(format!("Payment: {:?}", request)),
         Err(_e) => Err(Status::InternalServerError),
     }
 }
