@@ -5,6 +5,8 @@ use tink::TinkApiGateway;
 extern crate rocket;
 #[macro_use]
 extern crate serde;
+#[macro_use]
+extern crate serde_json;
 
 mod tink;
 
@@ -14,7 +16,7 @@ async fn payment_request(
     currency: &str,
     amount: u32,
     tink: &State<TinkApiGateway>,
-) -> Result<String, Status> {
+) -> Result<serde_json::Value, Status> {
     let access_token = match tink.get_access_token().await {
         Ok(token) => token,
         Err(_e) => return Err(Status::InternalServerError),
@@ -24,24 +26,30 @@ async fn payment_request(
         .create_payment_request(&access_token, market, currency, amount)
         .await
     {
-        Ok(payment_request) => Ok(format!("payment request id: {:?}", payment_request.id)),
+        Ok(payment_request) => Ok(json!({ "data": payment_request, "token": access_token })),
         Err(_e) => Err(Status::InternalServerError),
     }
 }
 
-#[get("/payment-confirmation/<request_id>")]
+#[post("/payment-confirmation/<request_id>")]
 async fn payment_confirmation(
     request_id: &str,
     tink: &State<TinkApiGateway>,
-) -> Result<String, Status> {
+) -> Result<serde_json::Value, Status> {
     let access_token = match tink.get_access_token().await {
         Ok(token) => token,
-        Err(_e) => return Err(Status::InternalServerError),
+        Err(e) => {
+            eprintln!("{}", e);
+            return Err(Status::InternalServerError);
+        }
     };
 
     match tink.get_transfer_status(&access_token, request_id).await {
-        Ok(request) => Ok(format!("Payment: {:?}", request)),
-        Err(_e) => Err(Status::InternalServerError),
+        Ok(transfers) => Ok(json!({ "data": transfers })),
+        Err(e) => {
+            eprintln!("{}", e);
+            Err(Status::InternalServerError)
+        }
     }
 }
 

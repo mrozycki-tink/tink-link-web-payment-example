@@ -1,11 +1,15 @@
 use std::fmt;
 
+use rust_decimal::Decimal;
+
 #[derive(Debug, Clone)]
-pub struct TinkApiError;
+pub struct TinkApiError {
+    message: String,
+}
 
 impl fmt::Display for TinkApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Tink API error")
+        write!(f, "Tink API error: {}", self.message)
     }
 }
 
@@ -13,8 +17,10 @@ impl<T> From<T> for TinkApiError
 where
     T: std::error::Error,
 {
-    fn from(_: T) -> Self {
-        Self {}
+    fn from(e: T) -> Self {
+        Self {
+            message: e.to_string(),
+        }
     }
 }
 
@@ -47,7 +53,7 @@ pub struct CreatedTransfers {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatedTransfer {
-    pub amount: i64,
+    pub amount: Decimal,
     pub created: i64,
     pub currency: String,
     pub destination: Destination,
