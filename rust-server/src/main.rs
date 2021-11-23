@@ -41,5 +41,11 @@ async fn payment_confirmation(request_id: &str) -> Result<String, Status> {
 
 #[launch]
 fn rocket() -> _ {
+    if std::env::var("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID").is_err() {
+        panic!("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID env var needs to be set");
+    }
+    if std::env::var("TINK_LINK_PAYMENT_CLIENT_SECRET").is_err() {
+        panic!("TINK_LINK_PAYMENT_CLIENT_SECRET env var needs to be set");
+    }
     rocket::build().mount("/", routes![payment_request, payment_confirmation])
 }

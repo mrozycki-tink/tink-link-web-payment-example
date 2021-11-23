@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{env, fmt};
 
 #[derive(Debug, Clone)]
 pub struct TinkApiError;
@@ -28,6 +28,9 @@ struct AccessTokenResponse {
 
 pub async fn get_access_token() -> Result<String, TinkApiError> {
     const SCOPES: &str = "payment:read,payment:write";
+    let client_id = env::var("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID").unwrap();
+    let client_secret = env::var("TINK_LINK_PAYMENT_CLIENT_SECRET").unwrap();
+
     let client = reqwest::Client::new();
     let response = client
         .post("https://api.tink.com/api/v1/oauth/token")
@@ -36,8 +39,8 @@ pub async fn get_access_token() -> Result<String, TinkApiError> {
             "application/x-www-form-urlencoded; charset=utf-8",
         )
         .form(&[
-            ("client_id", "redacted"),
-            ("client_secret", "redacted"),
+            ("client_id", client_id.as_str()),
+            ("client_secret", client_secret.as_str()),
             ("grant_type", "client_credentials"),
             ("scope", SCOPES),
         ])
