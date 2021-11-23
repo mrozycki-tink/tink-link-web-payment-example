@@ -50,15 +50,11 @@ async fn payment_confirmation(
 
 #[launch]
 fn rocket() -> _ {
-    let client_id = match std::env::var("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID") {
-        Ok(client_id) => client_id,
-        Err(_) => panic!("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID env var needs to be set"),
-    };
+    let client_id = std::env::var("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID")
+        .expect("REACT_APP_TINK_LINK_PAYMENT_CLIENT_ID env var needs to be set");
 
-    let client_secret = match std::env::var("TINK_LINK_PAYMENT_CLIENT_SECRET") {
-        Ok(client_secret) => client_secret,
-        Err(_) => panic!("TINK_LINK_PAYMENT_CLIENT_SECRET env var needs to be set"),
-    };
+    let client_secret = std::env::var("TINK_LINK_PAYMENT_CLIENT_SECRET")
+        .expect("TINK_LINK_PAYMENT_CLIENT_SECRET env var needs to be set");
 
     rocket::build()
         .manage(tink::TinkApiGateway::new(
