@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, fmt};
+use std::{env, fmt};
 
 #[derive(Debug, Clone)]
 pub struct TinkApiError;
@@ -28,31 +28,31 @@ struct AccessTokenResponse {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct PaymentRequest<'a> {
-    id: Option<&'a str>,
+struct PaymentRequest {
+    id: Option<String>,
     amount: u32,
-    currency: &'a str,
-    market: &'a str,
-    source_message: &'a str,
-    recipient_name: &'a str,
-    remittance_information: RemittanceInformation<'a>,
-    destinations: Vec<Destination<'a>>,
+    currency: String,
+    market: String,
+    source_message: String,
+    recipient_name: String,
+    remittance_information: RemittanceInformation,
+    destinations: Vec<Destination>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct RemittanceInformation<'a> {
+struct RemittanceInformation {
     #[serde(rename = "type")]
-    type_field: &'a str,
-    value: &'a str,
+    type_field: String,
+    value: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Destination<'a> {
-    account_number: &'a str,
+struct Destination {
+    account_number: String,
     #[serde(rename = "type")]
-    type_field: &'a str,
+    type_field: String,
 }
 
 pub async fn get_access_token() -> Result<String, TinkApiError> {
@@ -90,17 +90,17 @@ pub async fn create_payment_request(
     let payment_request = PaymentRequest {
         id: None,
         amount,
-        currency,
-        market,
-        source_message: "Payment for Sneaker 034",
-        recipient_name: "Demo Store AB",
+        currency: currency.to_owned(),
+        market: market.to_owned(),
+        source_message: "Payment for Sneaker 034".to_owned(),
+        recipient_name: "Demo Store AB".to_owned(),
         remittance_information: RemittanceInformation {
-            type_field: "UNSTRUCTURED",
-            value: "3245928392092",
+            type_field: "UNSTRUCTURED".to_owned(),
+            value: "3245928392092".to_owned(),
         },
         destinations: vec![Destination {
-            account_number: "33008808080808",
-            type_field: "se",
+            account_number: "33008808080808".to_owned(),
+            type_field: "se".to_owned(),
         }],
     };
 
@@ -112,10 +112,10 @@ pub async fn create_payment_request(
         .json(&payment_request)
         .send()
         .await?
-        .json::<HashMap<String, String>>()
+        .json::<PaymentRequest>()
         .await?;
 
-    Ok(response.get("id").unwrap().to_owned())
+    Ok(response.id.unwrap())
 }
 
 pub fn get_transfer_status(_access_token: &str, _request_id: &str) -> Result<String, TinkApiError> {
