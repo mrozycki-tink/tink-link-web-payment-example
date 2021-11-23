@@ -2,12 +2,14 @@ use rocket::http::Status;
 
 #[macro_use]
 extern crate rocket;
+#[macro_use]
+extern crate serde;
 
 mod tink;
 
 #[post("/payment-request/<market>/<currency>/<amount>")]
-fn payment_request(market: &str, currency: &str, amount: u32) -> Result<String, Status> {
-    let access_token = match tink::get_access_token() {
+async fn payment_request(market: &str, currency: &str, amount: u32) -> Result<String, Status> {
+    let access_token = match tink::get_access_token().await {
         Ok(token) => token,
         Err(_e) => return Err(Status::InternalServerError),
     };
@@ -22,8 +24,8 @@ fn payment_request(market: &str, currency: &str, amount: u32) -> Result<String, 
 }
 
 #[get("/payment-confirmation/<request_id>")]
-fn payment_confirmation(request_id: &str) -> Result<String, Status> {
-    let access_token = match tink::get_access_token() {
+async fn payment_confirmation(request_id: &str) -> Result<String, Status> {
+    let access_token = match tink::get_access_token().await {
         Ok(token) => token,
         Err(_e) => return Err(Status::InternalServerError),
     };

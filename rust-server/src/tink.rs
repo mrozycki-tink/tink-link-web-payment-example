@@ -9,8 +9,44 @@ impl fmt::Display for TinkApiError {
     }
 }
 
-pub fn get_access_token() -> Result<String, TinkApiError> {
-    Ok("12345".to_owned())
+impl<T> From<T> for TinkApiError
+where
+    T: std::error::Error,
+{
+    fn from(_: T) -> Self {
+        Self {}
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct AccessTokenResponse {
+    token_type: String,
+    expires_in: u32,
+    access_token: String,
+    scope: String,
+}
+
+pub async fn get_access_token() -> Result<String, TinkApiError> {
+    const SCOPES: &str = "payment:read,payment:write";
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.tink.com/api/v1/oauth/token")
+        .header(
+            "Content-Type",
+            "application/x-www-form-urlencoded; charset=utf-8",
+        )
+        .form(&[
+            ("client_id", "redacted"),
+            ("client_secret", "redacted"),
+            ("grant_type", "client_credentials"),
+            ("scope", SCOPES),
+        ])
+        .send()
+        .await?
+        .json::<AccessTokenResponse>()
+        .await?;
+
+    Ok(response.access_token)
 }
 
 pub fn create_payment_request(
