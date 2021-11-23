@@ -1,49 +1,43 @@
+use rocket::http::Status;
+
+#[macro_use]
+extern crate rocket;
+
 mod tink;
 
-use actix_web::{get, post, web, App, HttpResponse, HttpServer};
-
-#[post("/payment-request/{market}/{currency}/{amount}")]
-async fn payment_request(
-    web::Path((market, currency, amount)): web::Path<(String, String, u32)>,
-) -> HttpResponse {
+#[post("/payment-request/<market>/<currency>/<amount>")]
+fn payment_request(market: &str, currency: &str, amount: u32) -> Result<String, Status> {
     let access_token = match tink::get_access_token() {
         Ok(token) => token,
-        Err(e) => return HttpResponse::InternalServerError().body(format!("{}", e)),
+        Err(_e) => return Err(Status::InternalServerError),
     };
 
     match tink::create_payment_request(&access_token, &market, &currency, amount) {
-        Ok(()) => HttpResponse::Ok().body(format!(
+        Ok(()) => Ok(format!(
             "payment-request: {}; {} {}",
             market, amount, currency
         )),
-        Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
+        Err(_e) => Err(Status::InternalServerError),
     }
 }
 
-#[get("/payment-confirmation/{request_id}")]
-async fn payment_confirmation(web::Path(request_id): web::Path<String>) -> HttpResponse {
+#[get("/payment-confirmation/<request_id>")]
+fn payment_confirmation(request_id: &str) -> Result<String, Status> {
     let access_token = match tink::get_access_token() {
         Ok(token) => token,
-        Err(e) => return HttpResponse::InternalServerError().body(format!("{}", e)),
+        Err(_e) => return Err(Status::InternalServerError),
     };
 
     match tink::get_transfer_status(&access_token, &request_id) {
-        Ok(status) => HttpResponse::Ok().body(format!(
+        Ok(status) => Ok(format!(
             "payment-confirmation: {}; status: {}",
             request_id, status
         )),
-        Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
+        Err(_e) => Err(Status::InternalServerError),
     }
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .service(payment_request)
-            .service(payment_confirmation)
-    })
-    .bind("127.0.0.1:8080")?
-    .run()
-    .await
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/", routes![payment_request, payment_confirmation])
 }
