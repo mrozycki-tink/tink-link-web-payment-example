@@ -1,5 +1,5 @@
 use rocket::{http::Status, State};
-use tink::TinkApiGateway;
+use tink::{TinkApiError, TinkApiGateway};
 
 #[macro_use]
 extern crate rocket;
@@ -10,6 +10,13 @@ extern crate serde_json;
 
 mod tink;
 
+impl From<TinkApiError> for Status {
+    fn from(e: TinkApiError) -> Self {
+        eprintln!("Internal server error: {}", e);
+        Status::InternalServerError
+    }
+}
+
 #[post("/payment-request/<market>/<currency>/<amount>")]
 async fn payment_request(
     market: &str,
@@ -17,18 +24,13 @@ async fn payment_request(
     amount: u32,
     tink: &State<TinkApiGateway>,
 ) -> Result<serde_json::Value, Status> {
-    let access_token = match tink.get_access_token().await {
-        Ok(token) => token,
-        Err(_e) => return Err(Status::InternalServerError),
-    };
+    let access_token = tink.get_access_token().await?;
 
-    match tink
+    let payment_request = tink
         .create_payment_request(&access_token, market, currency, amount)
-        .await
-    {
-        Ok(payment_request) => Ok(json!({ "data": payment_request, "token": access_token })),
-        Err(_e) => Err(Status::InternalServerError),
-    }
+        .await?;
+
+    Ok(json!({ "data": payment_request, "token": access_token }))
 }
 
 #[post("/payment-confirmation/<request_id>")]
@@ -36,21 +38,10 @@ async fn payment_confirmation(
     request_id: &str,
     tink: &State<TinkApiGateway>,
 ) -> Result<serde_json::Value, Status> {
-    let access_token = match tink.get_access_token().await {
-        Ok(token) => token,
-        Err(e) => {
-            eprintln!("{}", e);
-            return Err(Status::InternalServerError);
-        }
-    };
+    let access_token = tink.get_access_token().await?;
+    let data = tink.get_transfer_status(&access_token, request_id).await?;
 
-    match tink.get_transfer_status(&access_token, request_id).await {
-        Ok(transfers) => Ok(json!({ "data": transfers })),
-        Err(e) => {
-            eprintln!("{}", e);
-            Err(Status::InternalServerError)
-        }
-    }
+    Ok(json!({ "data": data }))
 }
 
 #[launch]

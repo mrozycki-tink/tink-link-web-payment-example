@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 rocket = { version = "0.5.0-rc.1", features = ["json"] }
 reqwest = { version = "0.11.6", features = ["json"] }
+rust_decimal = { version = "1.17", features = ["serde-float"] }
 serde = "1.0"
 serde_json = "1.0"
-rust_decimal = { version = "1.17", features = ["serde-float"] }
